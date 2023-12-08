@@ -1,0 +1,4 @@
+- name: Installing dashboard
+  yum:
+    name: openstack-dashboard
+  when: ansible_distribution == "CentOS"

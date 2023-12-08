@@ -1,0 +1,13 @@
+#- hosts: controller
+#  become: true
+#  roles:
+#   - role: neutron
+#   - role: horizon
+#   - role: cinder
+
+- hosts: compute
+  become: true
+  roles:
+   - role: horizon
+   - role: neutron
+   - role: cinder

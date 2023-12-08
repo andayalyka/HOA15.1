@@ -1,0 +1,52 @@
+- name: Configuring metadata_agent.ini file
+  copy:
+    src: metadata_agent.ini
+    dest: /etc/neutron/metadata_agent.ini
+    owner: root
+    group: neutron
+    mode: '0640'
+  when: ansible_distribution == "CentOS"
+
+- name: Configuring nova.conf file
+  copy:
+    src: nova.conf
+    dest: /etc/nova/nova.conf
+    owner: root
+    group: nova
+    mode: '0640'
+  when: ansible_distribution == "CentOS"
+
+- name: Creating a link
+  command: ln -s /etc/neutron/plugins/ml2/ml2_conf.ini /etc/neutron/ml2_conf.ini
+  failed_when: false
+  no_log: true
+  when: ansible_distribution == "CentOS"
+
+- name: Populating the database
+  become_user: root
+  command: su -s /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron
+  failed_when: false
+  no_log: true
+  when: ansible_distribution == "CentOS"
+
+- name: Restarting the nova-api service
+  systemd:
+    name: openstack-nova-api.service
+    state: restarted
+  failed_when: false
+  no_log: true
+  when: ansible_distribution == "CentOS"
+
+- name: Starting and enabling the Networking services
+  systemd:
+    name:
+      - neutron-server.service
+      - neutron-linuxbridge-agent.service
+      - neutron-dhcp-agent.service
+      - neutron-metadata-agent.service
+    state: started
+    enabled: true
+  failed_when: false
+  no_log: true
+  when: ansible_distribution == "CentOS"
+

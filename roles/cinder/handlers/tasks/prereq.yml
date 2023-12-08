@@ -1,0 +1,48 @@
+- name: Creating cinder database
+  mysql_db:
+    name: cinder
+    state: present
+  become: true
+  become_user: root
+  when: ansible_distribution == "CentOS"
+
+- name: Sourcing the admin credentials
+  command: "source /home/cserver/admin-openrc"
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: "/home/cserver"
+  when: ansible_distribution == "CentOS"
+
+- name: Creating cinder user
+  expect:
+    command: "openstack user create --domain default --password-prompt cinder"
+    responses:
+      "User Password": "cinderpass"
+      "Repeat User Password": "cinderpass"
+  become: true
+  become_user: cserver
+  when: ansible_distribution == "CentOS"
+
+- name: Creating cinderv2 and cinderv3 service entities
+  command: "openstack service create --name cinderv2 --description 'OpenStack Block Storage V2' volumev2"
+  args:
+    executable: /bin/bash
+  become: true
+  become_user: cserver
+  when: ansible_distribution == "CentOS"
+
+- name: Creating a block storage service API endpoints
+  command: |
+    openstack endpoint create --region RegionOne volumev2 public http://controller:8776/v2/%\(tenant_id\)s
+    openstack endpoint create --region RegionOne volumev2 internal http://controller:8776/v2/%\(tenant_id\)s
+    openstack endpoint create --region RegionOne volumev2 admin http://controller:8776/v2/%\(tenant_id\)s
+    openstack endpoint create --region RegionOne volumev3 public http://controller:8776/v3/%\(tenant_id\)s
+    openstack endpoint create --region RegionOne volumev3 internal http://controller:8776/v3/%\(tenant_id\)s
+    openstack endpoint create --region RegionOne volumev3 admin http://controller:8776/v3/%\(tenant_id\)s
+  args:
+    executable: /bin/bash
+  become: true
+  become_user: cserver
+  when: ansible_distribution == "CentOS"
+

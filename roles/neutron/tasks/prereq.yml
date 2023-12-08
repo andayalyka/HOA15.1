@@ -1,0 +1,61 @@
+- name: Creating neutron database
+  mysql_db:
+    name: neutron
+    state: present
+  become: true
+  become_user: root
+  when: ansible_distribution == "CentOS"
+
+- name: Granting privileges on neutron database
+  mysql_user:
+    name: neutron
+    host: "{{ item }}"
+    password: neutronpass
+    priv: "neutron.*:ALL"
+    state: present
+  become: true
+  become_user: root
+  with_items:
+    - localhost
+    - "%"
+  when: ansible_distribution == "CentOS"
+
+- name: Sourcing the admin credentials
+  command: "source /home/cserver/admin-openrc"
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: "/home/cserver"
+  when: ansible_distribution == "CentOS"
+
+- name: Creating neutron user
+  expect:
+    command: "openstack user create --domain default --password-prompt neutron"
+    responses:
+      "User Password": "neutronpass"
+      "Repeat User Password": "neutronpass"
+  become: true
+  become_user: cserver
+  when: ansible_distribution == "CentOS"
+
+- name: Adding admin roles to the neutron user
+  command: "openstack role add --project service --user neutron admin"
+  become: true
+  become_user: cserver
+  when: ansible_distribution == "CentOS"
+
+- name: Creating neutron service entity
+  command: "openstack service create --name neutron --description 'OpenStack Networking Service' network"
+  become: true
+  become_user: cserver
+  when: ansible_distribution == "CentOS"
+
+- name: Creating the network service API endpoints
+  command: |
+    openstack endpoint create --region RegionOne network public http://controller:9696
+    openstack endpoint create --region RegionOne network internal http://controller:9696
+    openstack endpoint create --region RegionOne network admin http://controller:9696
+  become: true
+  become_user: cserver
+  when: ansible_distribution == "CentOS"
+
